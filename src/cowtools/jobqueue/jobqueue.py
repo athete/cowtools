@@ -142,7 +142,8 @@ def _find_env():
         env_path = env_path.strip("\u201c").strip(
             "\u201d"
         )  # Remove extra quotes if they appear
-    return str(Path(env_path).resolve()) # resolve symlinks
+    resolved_path = env_path if env_path is None else str(Path(env_path).resolve()) # resolve symlinks
+    return  resolved_path
 
 
 def _find_env_packages():
