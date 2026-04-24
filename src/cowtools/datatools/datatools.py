@@ -129,6 +129,11 @@ def scale_results(mc, lumi, mc_xsecs, mc_evt_cnts, verbose=False, dont_scale=Non
         if verbose:
             print(f"Dataset {dset} has MC lumi-scaling weight {mc_factor}")
         for obs_name, obs in results.items():
+            # Check if obs is a dict, in which case we don't scale that for now (TODO)
+            if isinstance(obs,dict):
+                warnings.warn(f"Not scaling dict element {obs_name}, since scaling more "
+                              "than doubly-nested dicts is not yet supported")
+                continue
             if obs_name not in dont_scale:
                 out[dset][obs_name] = obs * mc_factor
             else:
