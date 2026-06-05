@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import List, Optional, Tuple
 
 import yaml
 from dask.distributed import Client
@@ -9,37 +10,41 @@ from dask_jobqueue import HTCondorCluster
 
 
 def GetCondorClient(
-    x509_path=None,
-    container_image=None,
-    maximum=None,
-    max_workers=None,  # max_workers is synonym for 'maximum'
-    memory="2 GB",
-    disk="1 GB",
-    requirements=None,
-    ship_env=False,
-    transfer_input_files=None,
-    request_GPUs=None,
-):
+    x509_path: Optional[str] = None,
+    container_image: Optional[str] = None,
+    maximum: Optional[int] = None,
+    max_workers: Optional[int] = None,  # max_workers is synonym for 'maximum'
+    memory: str = "2 GB",
+    disk: str = "1 GB",
+    requirements: Optional[str] = None,
+    ship_env: bool = False,
+    transfer_input_files: Optional[List[str]] = None,
+    request_GPUs: Optional[str | int] = None,
+) -> Client:
     """
     Get a dask.distributed.Client object that can be used for distributed computation
     with an HTCondorCluster. Assumes some default settings for the cluster, including
     a reasonable timeout, location for log/output/error files, and image file to ship.
 
-    Inputs:
-        x509_path: (str) Path to the x509 proxy to ship to workers.
-        container_image: (str) Path to the image to be sent to worker nodes. Must be
-                    something that HTCondor accepts under the "container_image"
-                    classAd.
-        ship_env: (bool) If True, run jobs on workers in the same python virtual
-                  environment as the one in which the scheduler operates.
-        transfer_input_files: (list[str]) A python list of filepaths leading to files
-                              to be sent to workers.
-        request_GPUs: (str | int) The number of GPUs per job to request. If None, no
-                      GPUs will be requested. If an int, will be converted into a
-                      string.
+    Parameters
+    ----------
+        x509_path: str
+            Path to the x509 proxy to ship to workers.
+        container_image: str
+            Path to the image to be sent to worker nodes. Must be 
+            something that HTCondor accepts under the "container_image" classAd.
+        ship_env: bool 
+            If True, run jobs on workers in the same python virtual
+            environment as the one in which the scheduler operates.
+        transfer_input_files: List[str]
+            A python list of filepaths leading to files to be sent to workers.
+        request_GPUs: (str | int) 
+            The number of GPUs per job to request. If None, no GPUs will be requested. 
+            If an int, will be converted into a string.
 
-    Returns:
-        (dask.distributed.Client) A client connected to an HTCondor cluster.
+    Returns
+    -------
+        A dask.distributed.Client client connected to an HTCondor cluster.
     """
 
     # Make maximum and max_workers a synonym
@@ -136,7 +141,7 @@ def GetCondorClient(
     return Client(cluster)
 
 
-def _find_env():
+def _find_env() -> None | str:
     # Find the virtual environment and list it as a directory to be transferred
     env_path = os.getenv("VIRTUAL_ENV", None)
     if isinstance(env_path, str):
@@ -147,7 +152,7 @@ def _find_env():
     return  resolved_path
 
 
-def _find_env_packages():
+def _find_env_packages() -> Tuple[List, List]:
     # Find the virtual environment and list it as a directory to be transferred
     try:
         env_path = Path(_find_env())
@@ -172,7 +177,7 @@ def _find_env_packages():
     return pkgs_sched, pkgs_worker
 
 
-def _find_image():
+def _find_image() -> str:
     custom_sif = Path(f"/scratch/{os.environ['USER']}/notebook.sif")
     # If there is a custom SIF at /scratch/${USER}/notebook.sif, use that
     if custom_sif.is_file():
@@ -241,7 +246,7 @@ def _find_image():
     )
 
 
-def _find_x509(x509_path):
+def _find_x509(x509_path: str) -> None | str:
     """
     Attempts to find the voms x509 proxy. Also checks if a found proxy is valid for at least one hour.
     """
