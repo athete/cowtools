@@ -1,4 +1,5 @@
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -242,7 +243,7 @@ def _find_image():
 
 def _find_x509(x509_path):
     """
-    Attempt to find the voms x509 proxy.
+    Attempts to find the voms x509 proxy. Also checks if a found proxy is valid for at least one hour.
     """
 
     if x509_path and os.path.isfile(x509_path):
@@ -254,20 +255,19 @@ def _find_x509(x509_path):
         return None
     else:
         # try to find voms proxy automatically
+        # Check if the proxy is valid for at least one hour
         try:
-            _x509_localpath = (
-                next(
-                    line
-                    for line in os.popen("voms-proxy-info").read().split("\n")
-                    if line.startswith("path")
-                )
-                .split(":")[-1]
-                .strip()
+            subprocess.run(
+                "voms-proxy-info -exists -valid 01:00", shell=True, check=True
             )
-        except Exception:
-            print("Could not find voms proxy, but continuing anyway.")
-            print("Xrootd transfers will most likely fail.")
+        except subprocess.CalledProcessError:
+            print("VOMS proxy either is expired, expires within one hour, or does not exist. Please run `voms-proxy-init -voms cms -rfc -valid 200:0`")
+            print("Continuing anyway, XRootD transfers will most likely fail.")
             return None
+        
+        _x509_localpath = subprocess.check_output(
+            "voms-proxy-info -path", shell=True, text=True
+        ).strip()
 
         return _x509_localpath
 
